@@ -21,49 +21,125 @@ def transitions_preperching():
     return transitions
 
 
-df = pd.read_excel('data/outputs_concat2.xlsx', index_col=0)
+def column_from_datasets(datasets, column='action_codes'):
 
-maneuvers=np.array(df['out_action'])
-id_in_seq=np.array(df['id_in_seq'])
+    column_list = []
+    for path in datasets:
+        pdi = pd.read_csv(path)
+        column_list += list(np.transpose(pdi[column])) 
 
-
-columns = ["id_in_seq", "out_action"]
-
-dd = {id:{} for id in id_in_seq}
-
-
-for index, i in enumerate(id_in_seq):
-
-    try: 
-        dd[i][maneuvers[index]] += 1
-    except:
-        dd[i][maneuvers[index]] = 1
-
-print(dd)
-
-maneuvers = {}
-for key in dd.keys():
-    dman = dd[key]
-    if key == 0:
-        continue
-    for m, times in dman.items():
-        try:
-            maneuvers[m] += times
-        except:
-            maneuvers[m] = times
-
-fig = plt.figure()
-ax = fig.add_axes([0,0,1,1])
-mans, times = zip(*maneuvers.items())
-ax.bar(mans,times)
-ax.set_xticklabels(mans)
-plt.show()
+    return column_list
 
 
-transitions = transitions_preperching()
-print(len(transitions))
+def calc_action_frequencies(actions_frequency_from_datasets):
+    
+    actions_frequency_from_datasets.sort()
 
-for key in dd.keys():
-    if key == 0:
-        continue
+    actions, freq = [actions_frequency_from_datasets.pop(0)], [1]
+    for action in actions_frequency_from_datasets[1:]:
+        if action == actions[-1]:
+            freq[-1] += 1
+        else:
+            actions.append(action)
+            freq.append(1)
 
+    return actions, freq
+
+
+def draw_frequencies(N, actions, frequencies, resultpath):
+
+    actions.sort()
+    Xs = list(range(N))
+    Ys = []
+    zeros = []
+    marker = 0
+    for i in Xs:
+        if marker<len(actions) and i==actions[marker]:
+            Ys.append(frequencies[marker])
+            zeros.append(0)
+            marker += 1
+        else:
+            Ys.append(0)
+            zeros.append(-1000)
+            
+    plt.bar(Xs, Ys)
+    plt.bar(Xs, zeros)
+    # fig = plt.figure()
+    # ax = fig.add_axes([0,0,1,1])
+    # ax.bar(Xs,Ys)
+    # ax.set_xticklabels(mans)
+    plt.xticks(Xs)
+    plt.savefig(resultpath)
+    plt.show()
+    plt.close()
+
+def exp1(name="default"):
+    
+    transitions = transitions_preperching()
+
+    datasets = ['data/landing_test_mlp_format.csv', 'data/landing_train_mlp_format.csv']
+    actions = column_from_datasets(datasets)
+    
+    actions, frequencies = calc_action_frequencies(actions)
+    
+    draw_frequencies(len(transitions), actions, frequencies, name)
+
+
+
+
+def exp2(N, name="default"):
+    
+    transitions = transitions_preperching()
+
+    datasets = ['data/landing_test_mlp_format.csv', 'data/landing_train_mlp_format.csv']
+    actions = column_from_datasets(datasets)
+    ids = column_from_datasets(datasets, 'id_trajectory')
+    
+    actions, frequencies = calc_first_n_action_frequencies(N, actions, ids)
+    
+    draw_frequencies(len(transitions), actions, frequencies, name)
+
+
+def exp3(N, name):
+    
+    transitions = transitions_preperching()
+
+    datasets = ['data/landing_test_mlp_format.csv', 'data/landing_train_mlp_format.csv']
+    actions = column_from_datasets(datasets)
+    ids = column_from_datasets(datasets, 'id_trajectory')
+    
+    actions, frequencies = calc_first_n_action_frequencies(N, actions, ids, reverse=True)
+    
+    draw_frequencies(len(transitions), actions, frequencies, name)
+
+
+
+def calc_first_n_action_frequencies(N, actions, ids, reverse=False):
+
+    if reverse:
+        actions.reverse()
+        ids.reverse()
+
+    marker = 1
+    first_actions = [actions[0]]
+    for index, id in enumerate(ids[1:]):
+        if id == ids[index-1]:
+            if marker<N:
+                marker+=1
+                first_actions.append(actions[index])
+        else:
+            marker = 1
+            first_actions.append(actions[index])
+            
+    return calc_action_frequencies(first_actions)
+    
+
+if __name__ == '__main__':
+
+    # exp1()
+
+    # exp2(10)
+    
+    for i in range(10):
+        exp3(i+1, f'last_{i+1}')
+    
