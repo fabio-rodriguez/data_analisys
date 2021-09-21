@@ -5,6 +5,7 @@ import pandas as pd
 
 from math import *
 
+from matplotlib.pyplot import figure
 
 def transitions_preperching():
 
@@ -73,6 +74,32 @@ def draw_frequencies(N, actions, frequencies, resultpath):
     plt.show()
     plt.close()
 
+
+def draw_frequencies_prob(N, actions, frequencies, resultpath):
+
+    s = sum(frequencies)
+    print(s, frequencies)
+
+    fs = [100*f/s for f in frequencies]
+    
+    print(sum(fs), fs)
+
+    figure(figsize=(8, 6), dpi=80)
+
+    plt.bar(actions, fs)
+    # fig = plt.figure()
+    # ax = fig.add_axes([0,0,1,1])
+    # ax.bar(Xs,Ys)
+    # ax.set_xticklabels(mans)
+    plt.xticks(actions)
+    plt.ylabel("%")
+    plt.xlabel("ID_maneuvers")
+    plt.ylim([0, 25])
+    plt.savefig(resultpath, bbox_inches='tight')
+    plt.show()
+    plt.close()
+
+
 def exp1(name="default"):
     
     transitions = transitions_preperching()
@@ -81,10 +108,13 @@ def exp1(name="default"):
     actions = column_from_datasets(datasets)
     
     actions, frequencies = calc_action_frequencies(actions)
+
+    for i, f in enumerate(frequencies[:]):
+        if not f:
+            frequencies.pop(i)
+            actions.pop(i)
     
-    draw_frequencies(len(transitions), actions, frequencies, name)
-
-
+    draw_frequencies_prob(len(transitions), actions, frequencies, name)
 
 
 def exp2(N, name="default"):
@@ -136,10 +166,10 @@ def calc_first_n_action_frequencies(N, actions, ids, reverse=False):
 
 if __name__ == '__main__':
 
-    # exp1()
+    exp1()
 
     # exp2(10)
     
-    for i in range(10):
-        exp3(i+1, f'last_{i+1}')
+    # for i in range(10):
+    #     exp3(i+1, f'last_{i+1}')
     
